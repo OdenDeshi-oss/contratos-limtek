@@ -52,12 +52,6 @@ export default function App() {
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
-          <button
-            onClick={() => window.api.openManual()}
-            className="text-xs text-white/50 hover:text-white transition-colors px-2 py-1 rounded hover:bg-navy-light"
-          >
-            Manual
-          </button>
           <div className="text-right leading-tight">
             <p className="text-xs text-white/40">Desarrollado por <span className="text-white/60">César Pariona</span></p>
             <p className="text-xs text-white/30">© {new Date().getFullYear()} Todos los derechos reservados</p>
