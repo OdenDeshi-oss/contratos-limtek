@@ -1,6 +1,6 @@
 {
   "name": "contratos-limtek",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Generador de Contratos y Compromisos - Limtek",
   "main": "out/main/index.mjs",
   "scripts": {
