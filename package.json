@@ -34,7 +34,8 @@
     "publish": {
       "provider": "github",
       "owner": "OdenDeshi-oss",
-      "repo": "contratos-limtek"
+      "repo": "contratos-limtek",
+      "releaseType": "release"
     },
     "win": {
       "target": "nsis",
