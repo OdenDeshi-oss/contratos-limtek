@@ -377,7 +377,14 @@ function setupAutoUpdater(win) {
     })
   })
 
-  autoUpdater.on('error', () => { /* ignorar errores silenciosamente */ })
+  autoUpdater.on('error', (err) => {
+    dialog.showMessageBox(win, {
+      type: 'error',
+      title: 'Error de actualización',
+      message: String(err?.message || err),
+      buttons: ['OK'],
+    })
+  })
 
   // Verificar al iniciar y cada 4 horas
   autoUpdater.checkForUpdates()
@@ -402,7 +409,8 @@ function createWindow() {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  win.once('ready-to-show', () => setupAutoUpdater(win))
+  // Usar timeout en vez de ready-to-show para mayor compatibilidad con app instalada
+  setTimeout(() => setupAutoUpdater(win), 4000)
 }
 
 app.whenReady().then(async () => {
