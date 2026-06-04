@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import electronUpdater from 'electron-updater'
+const { autoUpdater } = electronUpdater
 import { join } from 'path'
 import { readFileSync, writeFileSync, copyFileSync, existsSync, mkdirSync, unlinkSync, utimesSync } from 'fs'
 import { tmpdir, homedir } from 'os'
@@ -69,7 +70,7 @@ function calcEndDate(dt, settings) {
 }
 
 function toFechaTexto(dt) {
-  return `${dt.getDate()} de ${MONTHS[dt.getMonth()]} de ${dt.getFullYear()}`
+  return `${dt.getDate()} DE ${MONTHS[dt.getMonth()].toUpperCase()} DE ${dt.getFullYear()}`
 }
 
 function fmtDate(dt) {
@@ -79,12 +80,21 @@ function fmtDate(dt) {
 }
 
 function parseDate(val) {
-  if (val instanceof Date) return val
-  // Excel serial number
-  if (typeof val === 'number') return new Date(Math.round((val - 25569) * 86400 * 1000))
+  if (val instanceof Date) {
+    // XLSX puede devolver fechas en UTC midnight — extraer componentes UTC para evitar desfase de zona horaria
+    return new Date(val.getUTCFullYear(), val.getUTCMonth(), val.getUTCDate())
+  }
+  if (typeof val === 'number') {
+    // Número serial de Excel → extraer componentes UTC para evitar restar un día en UTC-5 (Perú)
+    const utc = new Date(Math.round((val - 25569) * 86400 * 1000))
+    return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate())
+  }
   if (typeof val === 'string') {
     const parts = val.split('/')
     if (parts.length === 3) return new Date(+parts[2], +parts[1] - 1, +parts[0])
+    // Formato ISO YYYY-MM-DD (JS lo interpreta como UTC) → convertir a fecha local
+    const iso = val.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (iso) return new Date(+iso[1], +iso[2] - 1, +iso[3])
     return new Date(val)
   }
   return new Date(val)
