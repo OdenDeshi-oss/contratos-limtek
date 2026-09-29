@@ -125,7 +125,6 @@ function enrichRow(row, index, settings) {
     FECHA_TEXTO: fechaTexto,
     FECHA_FIN: fechaFin,
     SUELDO: String(row.SUELDO || s.SUELDO || ''),
-    _sueldoCustom: !!String(row.SUELDO || '').trim(),
   }
 }
 
