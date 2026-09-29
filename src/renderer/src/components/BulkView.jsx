@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react'
 import EditModal from './EditModal'
+import SueldoModal from './SueldoModal'
 import Toast from './Toast'
 
-const VISIBLE_COLS = ['NOMBRES','DNI','DIRECCION','FECHA_INICIO','FECHA_FIN','UNIDAD','HORARIO']
+const VISIBLE_COLS = ['NOMBRES','DNI','DIRECCION','FECHA_INICIO','FECHA_FIN','UNIDAD','HORARIO','SUELDO']
 
 export default function BulkView() {
   const [rows, setRows]           = useState([])
@@ -11,6 +12,7 @@ export default function BulkView() {
   const [sortKey, setSortKey]     = useState(null)
   const [sortAsc, setSortAsc]     = useState(true)
   const [editRow, setEditRow]     = useState(null)
+  const [showSueldo, setShowSueldo] = useState(false)
   const [outputDir, setOutputDir] = useState('')
   const [tipos, setTipos]         = useState({ contrato: true, compromiso: false })
   const [formato, setFormato]     = useState('word')
@@ -145,6 +147,20 @@ export default function BulkView() {
     setEditRow(null)
   }
 
+  // ── Sueldo ───────────────────────────────────────────────────────────────
+  const applySueldo = (sueldo, custom) => {
+    setRows(prev => prev.map(r => selected.has(r._id) ? { ...r, SUELDO: sueldo, _sueldoCustom: custom } : r))
+    setShowSueldo(false)
+    showToast(`Sueldo actualizado para ${selected.size} trabajador(es)`)
+  }
+
+  const handleResetSueldo = async () => {
+    const settings = await window.api.getSettings()
+    applySueldo(settings.SUELDO || '', false)
+  }
+
+  const sueldoActual = selected.size === 1 ? rows.find(r => selected.has(r._id))?.SUELDO : ''
+
   // ── Misc ─────────────────────────────────────────────────────────────────
   const handleDownloadFormat = async () => {
     const dst = await window.api.copyFormat(outputDir)
@@ -169,6 +185,7 @@ export default function BulkView() {
         <Btn onClick={handleLoad}           disabled={busy} primary>Cargar Excel</Btn>
         <div className="w-px h-6 bg-navy-light" />
         <Btn onClick={handleEdit}           disabled={busy || rows.length === 0 || selectedCount !== 1}>Editar</Btn>
+        <Btn onClick={() => setShowSueldo(true)} disabled={busy || selectedCount === 0}>Cambiar sueldo</Btn>
         <Btn onClick={handleGenerate}       disabled={busy || rows.length === 0} primary>
           {busy ? 'Generando…' : 'Generar'}
         </Btn>
@@ -272,7 +289,10 @@ export default function BulkView() {
                       <Checkbox checked={isSelected} onChange={() => toggleSelect(row._id, false)} />
                     </td>
                     {VISIBLE_COLS.map(col => (
-                      <td key={col} className={`px-3 py-2 whitespace-nowrap ${isInvalid && col === 'DNI' ? 'text-red-400 font-medium' : 'text-white/90'}`}>
+                      <td key={col} className={`px-3 py-2 whitespace-nowrap ${
+                        isInvalid && col === 'DNI' ? 'text-red-400 font-medium'
+                        : col === 'SUELDO' && row._sueldoCustom ? 'text-gold font-medium'
+                        : 'text-white/90'}`}>
                         {String(row[col] || '')}
                       </td>
                     ))}
@@ -289,6 +309,15 @@ export default function BulkView() {
           row={editRow}
           onSave={handleSaveEdit}
           onClose={() => setEditRow(null)}
+        />
+      )}
+      {showSueldo && (
+        <SueldoModal
+          count={selectedCount}
+          current={sueldoActual}
+          onSave={v => applySueldo(v, true)}
+          onReset={handleResetSueldo}
+          onClose={() => setShowSueldo(false)}
         />
       )}
       {toast && <Toast msg={toast.msg} type={toast.type} />}
