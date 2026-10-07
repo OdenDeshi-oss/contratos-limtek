@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import BulkView from './components/BulkView'
 import SingleForm from './components/SingleForm'
+import DjView from './components/DjView'
 import SettingsView from './components/SettingsView'
 import PasswordModal from './components/PasswordModal'
 
 const NAV = [
   { id: 'bulk',     label: 'Carga Masiva',   icon: '📋' },
   { id: 'single',   label: 'Nuevo Contrato', icon: '➕' },
+  { id: 'dj',       label: 'DJ y Compromiso', icon: '📝' },
   { id: 'settings', label: 'Configuración',  icon: '⚙️' },
 ]
 
@@ -63,6 +65,7 @@ export default function App() {
       <main className="flex-1 overflow-hidden">
         {view === 'bulk'     && <BulkView />}
         {view === 'single'   && <SingleForm />}
+        {view === 'dj'       && <DjView />}
         {view === 'settings' && <SettingsView />}
 
         {showPwdModal && (

@@ -8,6 +8,7 @@ import { execSync } from 'child_process'
 import XLSX from 'xlsx'
 import Docxtemplater from 'docxtemplater'
 import PizZip from 'pizzip'
+import { readDjWorkbook, buildDjPdf } from './dj.js'
 
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 
@@ -296,6 +297,28 @@ function findLibreOffice() {
   ]
   return candidates.find(p => existsSync(p)) || null
 }
+
+// ── DJ y Carta de Compromiso ─────────────────────────────────────────────────
+ipcMain.handle('dj-load-excel', async (_e, { filePath, sheet }) =>
+  readDjWorkbook(filePath, sheet, val => fmtDate(parseDate(val))))
+
+ipcMain.handle('dj-generate', async (_e, { rows, outputDir }) => {
+  const dir = outputDir || DOWNLOADS
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+  const valid   = rows.filter(r => r._errors.length === 0)
+  const skipped = rows.length - valid.length
+  if (valid.length === 0) return { outPath: null, count: 0, skipped }
+
+  const bytes = await buildDjPdf(readFileSync(resourcePath('DJ_COMPROMISO.pdf')), valid)
+  const now   = new Date()
+  const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const base  = join(dir, `DJ_COMPROMISO_${stamp}`)
+  let outPath = `${base}.pdf`
+  let n = 1
+  while (existsSync(outPath)) outPath = `${base} (${n++}).pdf`
+  writeFileSync(outPath, bytes)
+  return { outPath, count: valid.length, skipped }
+})
 
 ipcMain.handle('compute-dates', (_e, fechaInicio) => {
   try {

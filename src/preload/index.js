@@ -14,4 +14,7 @@ contextBridge.exposeInMainWorld('api', {
   getSettings:    ()          => ipcRenderer.invoke('get-settings'),
   saveSettings:   (data)      => ipcRenderer.invoke('save-settings', data),
   checkPassword:  (pwd)       => ipcRenderer.invoke('check-password', pwd),
+  djLoadExcel:    (opts)      => ipcRenderer.invoke('dj-load-excel', opts),
+  djGenerate:     (opts)      => ipcRenderer.invoke('dj-generate', opts),
+  openPath:       (path)      => ipcRenderer.invoke('open-folder', path),
 })

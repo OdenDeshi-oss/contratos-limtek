@@ -4,3 +4,5 @@ out/
 screenshots/
 *.log
 .env
+/PRELIMINAR*.xlsx
+/DJ Y CARTA DE COMPROMISO.pdf
