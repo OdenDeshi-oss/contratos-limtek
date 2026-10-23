@@ -448,7 +448,8 @@ function createWindow() {
   }
 
   // Usar timeout en vez de ready-to-show para mayor compatibilidad con app instalada
-  // Sin repositorio de actualizaciones propio todavía (el del Generador es otro): no se buscan.
+  // Actualizaciones desde los releases de contratos-limtek (mismo canal que la 1.5.x).
+  setTimeout(() => setupAutoUpdater(win), 4000)
 }
 
 app.whenReady().then(() => {

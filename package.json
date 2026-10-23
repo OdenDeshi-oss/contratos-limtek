@@ -1,6 +1,6 @@
 {
   "name": "contratos-limtek",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "description": "Gestión Integral de Contratos - Limtek (generar, renombrar y buscar contratos)",
   "main": "out/main/index.mjs",
   "scripts": {
@@ -13,18 +13,18 @@
   "dependencies": {
     "docxtemplater": "^3.50.0",
     "electron-updater": "^6.8.3",
-    "pdf-lib": "^1.17.1",
-    "pizzip": "^3.1.7",
-    "xlsx": "^0.18.5",
     "exceljs": "^4.4.0",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.10.38",
-    "tesseract.js": "^5.1.1"
+    "pizzip": "^3.1.7",
+    "tesseract.js": "^5.1.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "electron": "^30.5.1",
-    "electron-builder": "^25.0.5",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^2.3.0",
     "playwright-core": "^1.60.0",
     "postcss": "^8.4.47",
@@ -35,7 +35,7 @@
   },
   "build": {
     "appId": "com.limtek.contratos",
-    "productName": "Gestion Integral de Contratos",
+    "productName": "Contratos Limtek",
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico"
@@ -52,7 +52,17 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "OdenDeshi-oss",
+      "repo": "contratos-limtek",
+      "releaseType": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ]
   },
   "allowScripts": {
     "electron@30.5.1": true,

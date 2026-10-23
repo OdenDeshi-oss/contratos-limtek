@@ -32,11 +32,20 @@ let trabajador = null
 export async function ocrImagen(bytes, rutaIdioma) {
   if (!trabajador) {
     const { createWorker } = await import('tesseract.js')
-    trabajador = await createWorker('spa', 1, {
-      langPath: rutaIdioma,
-      cachePath: join(app.getPath('userData'), 'tesseract-cache'),
-      gzip: true,
-    })
+    // Dentro de Electron, tesseract.js cree estar en un navegador y trata
+    // langPath como una URL: con una ruta de Windows fallaba con "Only
+    // absolute URLs are supported" (probado con el instalador armado,
+    // 23/10/2026). Pero antes de "descargar" mira su caché como archivo local,
+    // así que el idioma se deja ahí ya descomprimido la primera vez.
+    const cache = join(app.getPath('userData'), 'tesseract-cache')
+    const enCache = join(cache, 'spa.traineddata')
+    if (!existsSync(enCache)) {
+      mkdirSync(cache, { recursive: true })
+      const { gunzipSync } = await import('zlib')
+      const { readFileSync, writeFileSync } = await import('fs')
+      writeFileSync(enCache, gunzipSync(readFileSync(join(rutaIdioma, 'spa.traineddata.gz'))))
+    }
+    trabajador = await createWorker('spa', 1, { langPath: rutaIdioma, cachePath: cache, gzip: true })
   }
   const { data } = await trabajador.recognize(Buffer.from(bytes))
   return data.text
