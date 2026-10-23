@@ -25,7 +25,7 @@ test('el Administrador integrado ve todo; los demás solo sus pantallas', () => 
   const c = U.buscar(db, 'contra1')
   assert.ok(U.puedeVer(c, 'renombrar') && U.puedeVer(c, 'buscar'))
   assert.ok(!U.puedeVer(c, 'bulk') && !U.puedeVer(c, 'usuarios'))
-  assert.equal(c.debeCambiar, true)
+  assert.equal(c.debeCambiar, false)   // entran directo con la clave que les pasa el Administrador
   assert.ok(!('hash' in U.publico(c)))
 })
 
@@ -65,4 +65,15 @@ test('restablecer deja la clave como temporal', () => {
   db = U.cambiarClave(db, 'contra1', 'nueva123', { debeCambiar: true })
   assert.equal(U.buscar(db, 'contra1').debeCambiar, true)
   assert.ok(U.claveCorrecta(U.buscar(db, 'contra1'), 'nueva123'))
+})
+
+test('la clave cambiada en su PC vale hasta que el Administrador ponga otra', () => {
+  let db = U.crear(vacio, { usuario: 'kve', clave: 'deladmin1' })
+  db.usuarios[0].creado = '2026-10-23T10:00:00.000Z'
+  const local = { kve: { ...U.huella('mipropia1'), cambiado: '2026-10-24T09:00:00.000Z' } }
+  assert.ok(U.claveCorrecta(U.buscar(U.aplicarClavesLocales(db, local), 'kve'), 'mipropia1'))
+  // el Administrador le restablece otra DESPUÉS: gana la del Administrador
+  db = U.cambiarClave(db, 'kve', 'nuevadmin1', { restablecido: '2026-10-25T08:00:00.000Z' })
+  const u = U.buscar(U.aplicarClavesLocales(db, local), 'kve')
+  assert.ok(U.claveCorrecta(u, 'nuevadmin1') && !U.claveCorrecta(u, 'mipropia1'))
 })

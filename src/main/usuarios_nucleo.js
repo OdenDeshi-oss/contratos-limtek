@@ -73,9 +73,11 @@ export function sesionAdmin(admin) {
     permisos: [], activo: true, debeCambiar: false, integrado: true }
 }
 
-// datos: { usuario, nombre, clave, permisos }. Quien lo crea pone una clave
-// temporal: al entrar por primera vez se le pide cambiarla.
-export function crear(db, datos, { debeCambiar = true, admin = null } = {}) {
+// datos: { usuario, nombre, clave, permisos }. Las cuentas viajan dentro de la
+// app (usuarios_integrados.json, ver usuarios.js) y el Administrador les pasa la
+// contraseña: entran directo, sin cambio obligatorio (decisión del usuario,
+// 23/10/2026).
+export function crear(db, datos, { debeCambiar = false, admin = null } = {}) {
   const usuario = normalizarUsuario(datos.usuario)
   revisarUsuario(usuario)
   revisarClave(datos.clave)
@@ -99,9 +101,16 @@ export function editar(db, usuario, cambios) {
   return { ...db, usuarios: db.usuarios.map((x) => (x.usuario === u.usuario ? nuevo : x)) }
 }
 
-export function cambiarClave(db, usuario, nueva, { debeCambiar = false } = {}) {
+// La clave que pone el Administrador lleva la fecha (`restablecido`): así una
+// clave cambiada por el propio usuario en su PC vale hasta que el Administrador
+// le restablezca otra en una versión nueva (ver aplicarClavesLocales).
+export function cambiarClave(db, usuario, nueva, { debeCambiar = false, restablecido = null } = {}) {
   revisarClave(nueva)
   const u = buscar(db, usuario) || error('No existe ese usuario.')
+  if (restablecido) {
+    return { ...db, usuarios: db.usuarios.map((x) => (x.usuario === u.usuario
+      ? { ...x, ...huella(nueva), debeCambiar, restablecido } : x)) }
+  }
   return { ...db, usuarios: db.usuarios.map((x) => (x.usuario === u.usuario ? { ...x, ...huella(nueva), debeCambiar } : x)) }
 }
 
@@ -121,4 +130,20 @@ export function publico(u) {
   const rol = u.integrado ? 'admin' : 'usuario'
   const ve = u.integrado ? [...PANTALLAS.map((p) => p.id), 'usuarios'] : (permisos || []).filter((p) => IDS.has(p))
   return { usuario, nombre, rol, permisos: permisos || [], activo, debeCambiar, creado, ultimoIngreso, ve }
+}
+
+
+// Claves cambiadas por cada persona en SU PC ({usuario: {sal, hash, cambiado}}).
+// Valen mientras sean más nuevas que la última clave que puso el Administrador
+// (`restablecido`, o `creado` si nunca la restableció). Lo del Administrador
+// siempre gana cuando es más nuevo.
+export function aplicarClavesLocales(db, locales) {
+  return {
+    ...db,
+    usuarios: db.usuarios.map((u) => {
+      const l = (locales || {})[u.usuario]
+      const base = u.restablecido || u.creado || ''
+      return l && l.hash && l.cambiado > base ? { ...u, sal: l.sal, hash: l.hash } : u
+    }),
+  }
 }

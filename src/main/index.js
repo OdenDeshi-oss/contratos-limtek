@@ -454,6 +454,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   usuarios.configurarAdmin(resourcePath('admin.json'))   // Administrador integrado (ver usuarios.js)
+  usuarios.configurarUsuarios(resourcePath('usuarios_integrados.json'))   // cuentas que viajan con la app
   createWindow()
 })
 

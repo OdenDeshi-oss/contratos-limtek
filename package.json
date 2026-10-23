@@ -1,6 +1,6 @@
 {
   "name": "contratos-limtek",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Gestión Integral de Contratos - Limtek (generar, renombrar y buscar contratos)",
   "main": "out/main/index.mjs",
   "scripts": {

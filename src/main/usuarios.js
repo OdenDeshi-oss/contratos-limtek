@@ -4,8 +4,14 @@
 //   herramientas/crear_admin.mjs y NO se sube a GitHub). Entra en todas las PCs
 //   con el mismo usuario y contraseña; nadie más puede ser Administrador
 //   (decisión del usuario, 23/10/2026).
-// - usuarios.json (carpeta de datos de la app, por PC): los demás usuarios, con
-//   la huella de su clave. Los crea el Administrador en cada PC.
+// - Los demás usuarios TAMBIÉN viajan dentro de la app
+//   (resources/usuarios_integrados.json, fuera de GitHub, dentro del instalador):
+//   el Administrador los crea/cambia en su PC (la del proyecto, desde donde se
+//   arma la versión) y llegan a las demás PCs con la actualización (decisión del
+//   usuario, 23/10/2026: "dejar cargadas las cuentas en la app"). En una PC
+//   instalada la lista es de solo lectura.
+// - claves_locales.json (por PC): si una persona cambia su propia clave, vale en
+//   esa PC hasta que el Administrador le restablezca otra en una versión nueva.
 // - recordar.json: "Recordar en este equipo". La clave se guarda CIFRADA con la
 //   protección de Windows de la cuenta (safeStorage / DPAPI): otra cuenta de
 //   Windows o una copia del archivo a otra PC no la puede leer. La clave nunca
@@ -20,7 +26,11 @@ import * as N from './usuarios_nucleo.js'
 const archivo = (nombre) => join(app.getPath('userData'), nombre)
 
 let rutaAdmin = null
+let rutaUsuarios = null
 export function configurarAdmin(ruta) { rutaAdmin = ruta }
+export function configurarUsuarios(ruta) { rutaUsuarios = ruta }
+// Solo se editan donde se arma la app (el proyecto en la PC del Administrador).
+export const editable = () => !app.isPackaged
 
 function adminIntegrado() {
   try {
@@ -29,12 +39,23 @@ function adminIntegrado() {
   } catch { return null }
 }
 
+function leerIntegrados() {
+  try { return JSON.parse(readFileSync(rutaUsuarios, 'utf8')) } catch { return { usuarios: [] } }
+}
+
+function leerClavesLocales() {
+  try { return JSON.parse(readFileSync(archivo('claves_locales.json'), 'utf8')) } catch { return {} }
+}
+
 function leer() {
-  try { return JSON.parse(readFileSync(archivo('usuarios.json'), 'utf8')) } catch { return { usuarios: [] } }
+  return N.aplicarClavesLocales(leerIntegrados(), leerClavesLocales())
 }
 
 function guardar(db) {
-  const ruta = archivo('usuarios.json')
+  if (!editable()) {
+    throw new Error('Las cuentas se cambian en la PC del Administrador y llegan con la siguiente actualización de la app.')
+  }
+  const ruta = rutaUsuarios
   mkdirSync(dirname(ruta), { recursive: true })
   if (existsSync(ruta)) writeFileSync(ruta + '.bak', readFileSync(ruta))   // copia por si algo sale mal
   writeFileSync(ruta, JSON.stringify(db, null, 1), 'utf8')
@@ -111,9 +132,6 @@ export function entrar({ usuario, clave, recordarme, usarRecordada }) {
   if (!esAdmin && !u.activo) throw new Error('Este usuario está desactivado. Habla con el Administrador.')
   fallos.delete(nombre)
   sesion = nombre
-  if (!esAdmin) {
-    guardar({ ...db, usuarios: db.usuarios.map((x) => (x.usuario === u.usuario ? { ...x, ultimoIngreso: new Date().toISOString() } : x)) })
-  }
   if (recordarme) recordar(nombre, clave)
   else olvidar()
   return estado()
@@ -127,7 +145,11 @@ export function cambiarMiClave({ actual, nueva }) {
     throw new Error('La contraseña del Administrador se cambia con herramientas/crear_admin.mjs y una nueva versión de la app.')
   }
   if (!N.claveCorrecta(u, actual)) throw new Error('La contraseña actual no es correcta.')
-  guardar(N.cambiarClave(leer(), u.usuario, nueva))
+  N.revisarClave(nueva)
+  // Se guarda en ESTA PC (claves_locales.json), no en la lista de la app.
+  const locales = leerClavesLocales()
+  locales[u.usuario] = { ...N.huella(nueva), cambiado: new Date().toISOString() }
+  writeFileSync(archivo('claves_locales.json'), JSON.stringify(locales, null, 1), 'utf8')
   const r = leerRecordado()
   if (r?.usuario === u.usuario && r.clave) recordar(u.usuario, nueva)   // que la recordada siga sirviendo
   return estado()
@@ -142,24 +164,24 @@ function soloAdmin() {
 
 export function listar() {
   soloAdmin()
-  return { usuarios: leer().usuarios.map(N.publico), pantallas: N.PANTALLAS, plantillas: N.PLANTILLAS }
+  return { usuarios: leer().usuarios.map(N.publico), pantallas: N.PANTALLAS, plantillas: N.PLANTILLAS, editable: editable() }
 }
 
 export function crearUsuario(datos) {
   soloAdmin()
-  guardar(N.crear(leer(), datos, { admin: adminIntegrado() }))
+  guardar(N.crear(leerIntegrados(), datos, { admin: adminIntegrado() }))
   return listar()
 }
 
 export function editarUsuario(usuario, cambios) {
   soloAdmin()
-  guardar(N.editar(leer(), usuario, cambios))
+  guardar(N.editar(leerIntegrados(), usuario, cambios))
   return listar()
 }
 
 export function restablecerClave(usuario, clave) {
   soloAdmin()
-  guardar(N.cambiarClave(leer(), usuario, clave, { debeCambiar: true }))
+  guardar(N.cambiarClave(leerIntegrados(), usuario, clave, { restablecido: new Date().toISOString() }))
   return listar()
 }
 

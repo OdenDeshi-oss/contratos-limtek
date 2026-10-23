@@ -11,6 +11,10 @@ export default function UsuariosView({ yo }) {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [nuevo, setNuevo] = useState({ usuario: '', nombre: '', clave: '', rol: 'usuario', permisos: [] })
+  // window.prompt NO existe en la app de escritorio (Electron): el botón no
+  // hacía nada (reportado por el usuario 23/10/2026). Cuadro propio.
+  const [restableciendo, setRestableciendo] = useState(null)
+  const [claveNueva, setClaveNueva] = useState('')
 
   const correr = async (fn, ok) => {
     setError(''); setAviso('')
@@ -28,14 +32,18 @@ export default function UsuariosView({ yo }) {
     permisos: u.permisos.includes(id) ? u.permisos.filter((p) => p !== id) : [...u.permisos, id],
   })
 
-  const restablecer = (u) => {
-    const clave = window.prompt(`Nueva contraseña TEMPORAL para "${u.usuario}" (mínimo 6).\nAl entrar se le pedirá cambiarla.`)
-    if (clave) correr(() => window.api.usuariosRestablecerClave({ usuario: u.usuario, clave }), `Contraseña de ${u.usuario} restablecida.`)
+  const restablecer = (u) => { setRestableciendo(u); setClaveNueva('') }
+  const confirmarRestablecer = async (e) => {
+    e.preventDefault()
+    const u = restableciendo
+    const ok = await correr(() => window.api.usuariosRestablecerClave({ usuario: u.usuario, clave: claveNueva }),
+      `Contraseña de ${u.usuario} cambiada. Le llega con la siguiente actualización.`)
+    if (ok) setRestableciendo(null)
   }
 
   const crear = async (e) => {
     e.preventDefault()
-    const ok = await correr(() => window.api.usuariosCrear(nuevo), `Usuario "${nuevo.usuario.trim().toLowerCase()}" creado. Al entrar por primera vez cambiará su contraseña.`)
+    const ok = await correr(() => window.api.usuariosCrear(nuevo), `Usuario "${nuevo.usuario.trim().toLowerCase()}" creado. Le llega con la siguiente actualización de la app.`)
     if (ok) setNuevo({ usuario: '', nombre: '', clave: '', rol: 'usuario', permisos: [] })
   }
 
@@ -48,10 +56,14 @@ export default function UsuariosView({ yo }) {
       <div>
         <h2 className="text-lg font-semibold">Usuarios</h2>
         <p className="text-sm text-white/60">
-          Solo tú eres Administrador (viene integrado en la app). A cada usuario de este equipo márcale las pantallas que puede usar; el cambio vale desde su siguiente clic.
+          Solo tú eres Administrador. Las cuentas viajan dentro de la app: créalas o cámbialas aquí (en la PC donde se arma
+          la versión) y llegan a las demás PCs con la siguiente actualización. Entran con la contraseña que les pases.
         </p>
       </div>
 
+      {datos.editable === false && (
+        <p className="text-yellow-300 text-sm">En esta PC las cuentas son de solo lectura: se cambian en la PC del Administrador.</p>
+      )}
       {error && <p className="text-red-400 text-sm">{error}</p>}
       {aviso && <p className="text-green-400 text-sm">{aviso}</p>}
 
@@ -79,7 +91,7 @@ export default function UsuariosView({ yo }) {
                   <td className="p-2">
                     <div className="font-medium">{u.usuario}{soyYo && <span className="text-gold text-xs"> (tú)</span>}</div>
                     <div className="text-xs text-white/50">{u.nombre}</div>
-                    {u.debeCambiar && <div className="text-xs text-yellow-300">contraseña temporal</div>}
+                    
                   </td>
                   {pantallas.map((p) => (
                     <td key={p.id} className="p-1 text-center">
@@ -108,7 +120,7 @@ export default function UsuariosView({ yo }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <input placeholder="Usuario (ej. rvargas)" value={nuevo.usuario} onChange={(e) => setNuevo({ ...nuevo, usuario: e.target.value })} className={campo} />
           <input placeholder="Nombre completo" value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} className={campo} />
-          <input placeholder="Contraseña temporal" type="text" value={nuevo.clave} onChange={(e) => setNuevo({ ...nuevo, clave: e.target.value })} className={campo} />
+          <input placeholder="Contraseña" type="text" value={nuevo.clave} onChange={(e) => setNuevo({ ...nuevo, clave: e.target.value })} className={campo} />
         </div>
         {(
           <div className="space-y-2">
@@ -131,6 +143,19 @@ export default function UsuariosView({ yo }) {
         <button type="submit" disabled={!nuevo.usuario.trim() || !nuevo.clave}
           className="px-4 py-2 rounded text-sm bg-gold text-navy font-semibold disabled:opacity-50">Crear usuario</button>
       </form>
+      {restableciendo && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <form onSubmit={confirmarRestablecer} className="bg-navy-dark border border-navy-light rounded-xl w-full max-w-sm p-6 space-y-3">
+            <h2 className="font-semibold">Restablecer contraseña de {restableciendo.usuario}</h2>
+            <p className="text-sm text-white/60">Nueva contraseña (mínimo 6). Le llega con la siguiente actualización de la app.</p>
+            <input autoFocus type="text" value={claveNueva} onChange={(e) => setClaveNueva(e.target.value)} className={campo + ' w-full'} />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setRestableciendo(null)} className="px-4 py-2 rounded text-sm border border-navy-light text-white/70">Cancelar</button>
+              <button type="submit" disabled={claveNueva.length < 6} className="px-4 py-2 rounded text-sm bg-gold text-navy font-semibold disabled:opacity-50">Guardar</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

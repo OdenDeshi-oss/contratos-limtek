@@ -17,3 +17,5 @@ pruebas_reales/
 
 # Administrador integrado (huella de la contraseña): va en el instalador, nunca a GitHub
 resources/admin.json
+# Cuentas de los usuarios (huellas de sus claves): van en el instalador, nunca a GitHub
+resources/usuarios_integrados.json
